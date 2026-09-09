@@ -1,12 +1,13 @@
 import warnings
 import difflib
+import time
 import streamlit as st
 from google import genai
 from google.genai import types
 
 warnings.filterwarnings("ignore")
 
-# Configuración de página con icono
+# Configuración de página
 st.set_page_config(
     page_title="Parafraseador Pro", 
     page_icon="✨", 
@@ -14,31 +15,22 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Estilos CSS para ocultar interfaz, avatares y ajustar márgenes
+# Estilos CSS
 st.markdown("""
     <style>
-    /* Ocultar elementos principales de la interfaz */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
-    
-    /* Ocultar marcas de agua, badges, avatares y botones flotantes */
     .stAppDeployButton {display: none !important;}
     [data-testid="stStatusWidget"] {display: none !important;}
     [data-testid="stViewerBadge"] {display: none !important;}
     [data-testid="stDecoration"] {display: none !important;}
     [data-testid="stToolbar"] {display: none !important;}
     [data-testid="stHeader"] {display: none !important;}
-    
-    /* Selectores por patrones de clase de Streamlit */
     div[class*="viewerBadge"] {display: none !important;}
     div[class*="stActionButton"] {display: none !important;}
     div[class*="styles_viewerBadge"] {display: none !important;}
-    
-    /* Ajustar espacio superior tras ocultar header */
-    .block-container {
-        padding-top: 2rem !important;
-    }
+    .block-container { padding-top: 2rem !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -59,7 +51,6 @@ PROMPTS_MODOS = {
     "Ampliar": "Desarrolla con mayor profundidad el contenido del texto agregando explicaciones complementarias."
 }
 
-# Inicializar sesión para persistir resultados
 if "texto_generado" not in st.session_state:
     st.session_state.texto_generado = ""
 if "html_resultado" not in st.session_state:
@@ -80,7 +71,6 @@ def parafrasear_texto(texto_original: str, modo: str) -> str:
         top_p=0.92,
     )
 
-    # Uso del modelo soportado gemini-3.6-flash
     response = client.models.generate_content(
         model='gemini-3.6-flash',
         contents=f"Texto a reescribir:\n\n{texto_original}",
@@ -110,7 +100,6 @@ def generar_diferencias_html(original: str, parafraseado: str) -> str:
 
     return " ".join(resultado_html)
 
-# Selector de modos
 modo_seleccionado = st.radio(
     "Selecciona el modo de parafraseo:",
     options=list(PROMPTS_MODOS.keys()),
@@ -153,7 +142,22 @@ with col2:
                     st.session_state.texto_generado = parafrasear_texto(texto_entrada, modo_seleccionado)
                     st.session_state.html_resultado = generar_diferencias_html(texto_entrada, st.session_state.texto_generado)
                 except Exception as e:
-                    st.error(f"Error al conectar con la API de Gemini: {e}")
+                    err_msg = str(e)
+                    if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
+                        # CONTADOR EN TIEMPO REAL
+                        aviso = st.empty()
+                        progreso = st.progress(1.0)
+                        
+                        segundos_espera = 15
+                        for i in range(segundos_espera, 0, -1):
+                            aviso.warning(f"⏳ **Límite de la cuota alcanzado.** Podrás volver a intentar en **{i} segundos**...")
+                            progreso.progress(i / segundos_espera)
+                            time.sleep(1)
+                        
+                        aviso.success("✅ **¡Listo! Puedes presionar 'Reformular' nuevamente.**")
+                        progreso.empty()
+                    else:
+                        st.error(f"Error al conectar con la API de Gemini: {e}")
         else:
             st.warning("Escribe o pega un texto en la columna izquierda antes de presionar el botón.")
 
