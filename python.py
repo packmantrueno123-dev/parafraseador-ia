@@ -14,7 +14,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Ocultar elementos de administración, barra de desarrollador y pie de página
+# Ocultar elementos de administración, barra de desarrollador, toolbar y pie de página
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -24,6 +24,9 @@ st.markdown("""
     [data-testid="stStatusWidget"] {display:none !important;}
     [data-testid="stViewerBadge"] {display:none !important;}
     div[class*="viewerBadge"] {display:none !important;}
+    div[class*="stActionButton"] {display:none !important;}
+    div[data-testid="stToolbar"] {display:none !important;}
+    #stDecoration {display:none !important;}
     </style>
     """, unsafe_allow_html=True)
 
