@@ -59,6 +59,12 @@ PROMPTS_MODOS = {
     "Ampliar": "Desarrolla con mayor profundidad el contenido del texto agregando explicaciones complementarias."
 }
 
+# Inicializar sesión para persisitir resultados
+if "texto_generado" not in st.session_state:
+    st.session_state.texto_generado = ""
+if "html_resultado" not in st.session_state:
+    st.session_state.html_resultado = ""
+
 def parafrasear_texto(texto_original: str, modo: str) -> str:
     client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
     system_instruction = PROMPTS_MODOS.get(modo, PROMPTS_MODOS["Estándar"])
@@ -138,16 +144,22 @@ with col2:
     if btn_procesar:
         if texto_entrada.strip():
             with st.spinner("Transformando texto..."):
-                texto_generado = parafrasear_texto(texto_entrada, modo_seleccionado)
-                html_resultado = generar_diferencias_html(texto_entrada, texto_generado)
-
-                st.markdown(
-                    f"""
-                    <div style="background-color: #262730; padding: 15px; border-radius: 8px; min-height: 250px; font-size: 1.05rem; line-height: 1.6;">
-                        {html_resultado}
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
+                st.session_state.texto_generado = parafrasear_texto(texto_entrada, modo_seleccionado)
+                st.session_state.html_resultado = generar_diferencias_html(texto_entrada, st.session_state.texto_generado)
         else:
             st.warning("Escribe o pega un texto en la columna izquierda antes de presionar el botón.")
+
+    # Mostrar resultado y opción de copia si existe texto generado
+    if st.session_state.texto_generado:
+        st.markdown(
+            f"""
+            <div style="background-color: #262730; padding: 15px; border-radius: 8px; min-height: 200px; font-size: 1.05rem; line-height: 1.6; margin-bottom: 15px;">
+                {st.session_state.html_resultado}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        st.write("📋 **Texto plano listo para copiar en móvil:**")
+        # El componente st.code incluye de forma nativa un botón de copiado flotante fácil de usar en celulares
+        st.code(st.session_state.texto_generado, language=None)
