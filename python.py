@@ -1,7 +1,6 @@
 import warnings
 import difflib
 import streamlit as st
-import streamlit.components.v1 as components
 from google import genai
 from google.genai import types
 
@@ -15,37 +14,33 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Ocultar elementos conocidos por CSS
+# Estilos CSS para ocultar elementos de la interfaz, marcas de agua y ajustar márgenes
 st.markdown("""
     <style>
+    /* Ocultar elementos principales de la interfaz */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
-    .stAppDeployButton {display:none;}
-    [data-testid="stStatusWidget"] {display:none !important;}
-    [data-testid="stViewerBadge"] {display:none !important;}
-    div[class*="viewerBadge"] {display:none !important;}
-    div[class*="stActionButton"] {display:none !important;}
-    div[data-testid="stToolbar"] {display:none !important;}
-    #stDecoration {display:none !important;}
+    
+    /* Ocultar marcas de agua, badges, avatares y botones flotantes */
+    .stAppDeployButton {display: none !important;}
+    [data-testid="stStatusWidget"] {display: none !important;}
+    [data-testid="stViewerBadge"] {display: none !important;}
+    [data-testid="stDecoration"] {display: none !important;}
+    [data-testid="stToolbar"] {display: none !important;}
+    [data-testid="stHeader"] {display: none !important;}
+    
+    /* Selectores por patrones de clase de Streamlit */
+    div[class*="viewerBadge"] {display: none !important;}
+    div[class*="stActionButton"] {display: none !important;}
+    div[class*="styles_viewerBadge"] {display: none !important;}
+    
+    /* Ajustar el espacio superior tras ocultar el header */
+    .block-container {
+        padding-top: 2rem !important;
+    }
     </style>
     """, unsafe_allow_html=True)
-
-# Script de JavaScript para eliminar por fuerza bruta el contenedor del avatar
-components.html(
-    """
-    <script>
-    const removeBadge = () => {
-        const parentDoc = window.parent.document;
-        const badges = parentDoc.querySelectorAll('[data-testid="stViewerBadge"], div[class*="viewerBadge"], [data-testid="stStatusWidget"]');
-        badges.forEach(el => el.remove());
-    };
-    setInterval(removeBadge, 500);
-    </script>
-    """,
-    height=0,
-    width=0,
-)
 
 st.title("📝 Parafraseador Multi-Modo con IA")
 st.write("Selecciona el modo de redacción deseado y transforma tu texto al instante.")
