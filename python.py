@@ -9,7 +9,7 @@ warnings.filterwarnings("ignore")
 # Configuración de página
 st.set_page_config(
     page_title="Parafraseador Pro", 
-    page_icon="📝", 
+    page_icon="✨", 
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -42,7 +42,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("📝 Parafraseador Multi-Modo con IA")
+st.title("✨ Parafraseador Multi-Modo con IA")
 st.write("Selecciona el modo de redacción deseado y transforma tu texto al instante.")
 
 PROMPTS_MODOS = {
@@ -59,14 +59,18 @@ PROMPTS_MODOS = {
     "Ampliar": "Desarrolla con mayor profundidad el contenido del texto agregando explicaciones complementarias."
 }
 
-# Inicializar sesión para persisitir resultados
+# Inicializar sesión para persistir resultados
 if "texto_generado" not in st.session_state:
     st.session_state.texto_generado = ""
 if "html_resultado" not in st.session_state:
     st.session_state.html_resultado = ""
 
 def parafrasear_texto(texto_original: str, modo: str) -> str:
-    client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
+    api_key = st.secrets.get("GEMINI_API_KEY")
+    if not api_key:
+        raise ValueError("No se encontró la clave 'GEMINI_API_KEY' en st.secrets.")
+
+    client = genai.Client(api_key=api_key)
     system_instruction = PROMPTS_MODOS.get(modo, PROMPTS_MODOS["Estándar"])
     temp = 0.85 if modo in ["Humanizar", "Creativo"] else 0.5
 
@@ -76,8 +80,9 @@ def parafrasear_texto(texto_original: str, modo: str) -> str:
         top_p=0.92,
     )
 
+    # CORRECCIÓN AQUÍ: Se cambió 'gemini-3.6-flash' por 'gemini-2.5-flash'
     response = client.models.generate_content(
-        model='gemini-3.6-flash',
+        model='gemini-2.5-flash',
         contents=f"Texto a reescribir:\n\n{texto_original}",
         config=config,
     )
@@ -144,12 +149,14 @@ with col2:
     if btn_procesar:
         if texto_entrada.strip():
             with st.spinner("Transformando texto..."):
-                st.session_state.texto_generado = parafrasear_texto(texto_entrada, modo_seleccionado)
-                st.session_state.html_resultado = generar_diferencias_html(texto_entrada, st.session_state.texto_generado)
+                try:
+                    st.session_state.texto_generado = parafrasear_texto(texto_entrada, modo_seleccionado)
+                    st.session_state.html_resultado = generar_diferencias_html(texto_entrada, st.session_state.texto_generado)
+                except Exception as e:
+                    st.error(f"Error al conectar con la API de Gemini: {e}")
         else:
             st.warning("Escribe o pega un texto en la columna izquierda antes de presionar el botón.")
 
-    # Mostrar resultado y opción de copia si existe texto generado
     if st.session_state.texto_generado:
         st.markdown(
             f"""
@@ -161,5 +168,4 @@ with col2:
         )
 
         st.write("📋 **Texto plano listo para copiar en móvil:**")
-        # El componente st.code incluye de forma nativa un botón de copiado flotante fácil de usar en celulares
         st.code(st.session_state.texto_generado, language=None)
