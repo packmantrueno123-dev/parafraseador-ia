@@ -1,12 +1,11 @@
 import warnings
 import difflib
 import streamlit as st
-from google import genai
-from google.genai import types
+import google.generativeai as genai
 
 warnings.filterwarnings("ignore")
 
-# Configuración de página
+# Configuración de página con icono
 st.set_page_config(
     page_title="Parafraseador Pro", 
     page_icon="✨", 
@@ -14,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Estilos CSS para ocultar elementos de la interfaz, marcas de agua y ajustar márgenes
+# Estilos CSS para ocultar interfaz, avatares y ajustar márgenes
 st.markdown("""
     <style>
     /* Ocultar elementos principales de la interfaz */
@@ -35,7 +34,7 @@ st.markdown("""
     div[class*="stActionButton"] {display: none !important;}
     div[class*="styles_viewerBadge"] {display: none !important;}
     
-    /* Ajustar el espacio superior tras ocultar el header */
+    /* Ajustar espacio superior tras ocultar header */
     .block-container {
         padding-top: 2rem !important;
     }
@@ -70,23 +69,21 @@ def parafrasear_texto(texto_original: str, modo: str) -> str:
     if not api_key:
         raise ValueError("No se encontró la clave 'GEMINI_API_KEY' en st.secrets.")
 
-    client = genai.Client(api_key=api_key)
+    genai.configure(api_key=api_key)
+    
     system_instruction = PROMPTS_MODOS.get(modo, PROMPTS_MODOS["Estándar"])
     temp = 0.85 if modo in ["Humanizar", "Creativo"] else 0.5
 
-    config = types.GenerateContentConfig(
+    model = genai.GenerativeModel(
+        model_name="gemini-2.5-flash",
         system_instruction=system_instruction,
-        temperature=temp,
-        top_p=0.92,
+        generation_config={
+            "temperature": temp,
+            "top_p": 0.92,
+        }
     )
 
-    # CORRECCIÓN AQUÍ: Se cambió 'gemini-3.6-flash' por 'gemini-2.5-flash'
-    response = client.models.generate_content(
-        model='gemini-2.5-flash',
-        contents=f"Texto a reescribir:\n\n{texto_original}",
-        config=config,
-    )
-
+    response = model.generate_content(f"Texto a reescribir:\n\n{texto_original}")
     return response.text
 
 def generar_diferencias_html(original: str, parafraseado: str) -> str:
