@@ -14,13 +14,16 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Ocultar botones de Streamlit (Deploy, Footer, Menú)
+# Ocultar elementos de administración, barra de desarrollador y pie de página
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
     .stAppDeployButton {display:none;}
+    [data-testid="stStatusWidget"] {display:none !important;}
+    [data-testid="stViewerBadge"] {display:none !important;}
+    div[class*="viewerBadge"] {display:none !important;}
     </style>
     """, unsafe_allow_html=True)
 
