@@ -1,7 +1,8 @@
 import warnings
 import difflib
 import streamlit as st
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 warnings.filterwarnings("ignore")
 
@@ -69,21 +70,23 @@ def parafrasear_texto(texto_original: str, modo: str) -> str:
     if not api_key:
         raise ValueError("No se encontró la clave 'GEMINI_API_KEY' en st.secrets.")
 
-    genai.configure(api_key=api_key)
-    
+    client = genai.Client(api_key=api_key)
     system_instruction = PROMPTS_MODOS.get(modo, PROMPTS_MODOS["Estándar"])
     temp = 0.85 if modo in ["Humanizar", "Creativo"] else 0.5
 
-    model = genai.GenerativeModel(
-        model_name="gemini-2.5-flash",
+    config = types.GenerateContentConfig(
         system_instruction=system_instruction,
-        generation_config={
-            "temperature": temp,
-            "top_p": 0.92,
-        }
+        temperature=temp,
+        top_p=0.92,
     )
 
-    response = model.generate_content(f"Texto a reescribir:\n\n{texto_original}")
+    # Uso del modelo soportado gemini-3.6-flash
+    response = client.models.generate_content(
+        model='gemini-3.6-flash',
+        contents=f"Texto a reescribir:\n\n{texto_original}",
+        config=config,
+    )
+
     return response.text
 
 def generar_diferencias_html(original: str, parafraseado: str) -> str:
