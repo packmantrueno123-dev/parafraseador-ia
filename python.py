@@ -1,6 +1,7 @@
 import warnings
 import difflib
 import streamlit as st
+import streamlit.components.v1 as components
 from google import genai
 from google.genai import types
 
@@ -14,29 +15,37 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Ocultar elementos de administración, barra de desarrollador, toolbar y pie de página
+# Ocultar elementos conocidos por CSS
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
     .stAppDeployButton {display:none;}
-    
-    /* Ocultar barra flotante de administración y estado */
-    [data-testid="stStatusWidget"],
-    [data-testid="stViewerBadge"],
-    [data-testid="stDecoration"],
-    [data-testid="stToolbar"],
-    .viewerBadge_container__13vxi,
-    .viewerBadge_link__1S137,
-    div[class*="viewerBadge"],
-    div[class*="StatusWidget"],
-    div[class*="stActionButton"] {
-        display: none !important;
-        visibility: hidden !important;
-    }
+    [data-testid="stStatusWidget"] {display:none !important;}
+    [data-testid="stViewerBadge"] {display:none !important;}
+    div[class*="viewerBadge"] {display:none !important;}
+    div[class*="stActionButton"] {display:none !important;}
+    div[data-testid="stToolbar"] {display:none !important;}
+    #stDecoration {display:none !important;}
     </style>
     """, unsafe_allow_html=True)
+
+# Script de JavaScript para eliminar por fuerza bruta el contenedor del avatar
+components.html(
+    """
+    <script>
+    const removeBadge = () => {
+        const parentDoc = window.parent.document;
+        const badges = parentDoc.querySelectorAll('[data-testid="stViewerBadge"], div[class*="viewerBadge"], [data-testid="stStatusWidget"]');
+        badges.forEach(el => el.remove());
+    };
+    setInterval(removeBadge, 500);
+    </script>
+    """,
+    height=0,
+    width=0,
+)
 
 st.title("📝 Parafraseador Multi-Modo con IA")
 st.write("Selecciona el modo de redacción deseado y transforma tu texto al instante.")
@@ -56,7 +65,6 @@ PROMPTS_MODOS = {
 }
 
 def parafrasear_texto(texto_original: str, modo: str) -> str:
-    # Lee la clave de forma segura desde Streamlit Secrets
     client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
     system_instruction = PROMPTS_MODOS.get(modo, PROMPTS_MODOS["Estándar"])
     temp = 0.85 if modo in ["Humanizar", "Creativo"] else 0.5
@@ -76,7 +84,6 @@ def parafrasear_texto(texto_original: str, modo: str) -> str:
     return response.text
 
 def generar_diferencias_html(original: str, parafraseado: str) -> str:
-    """Compara ambos textos y genera etiquetas HTML con colores estilo QuillBot."""
     palabras_orig = original.split()
     palabras_para = parafraseado.split()
     
@@ -89,13 +96,10 @@ def generar_diferencias_html(original: str, parafraseado: str) -> str:
             continue
 
         if tag == 'equal':
-            # Texto que no cambió (Subrayado amarillo)
             resultado_html.append(f'<span style="border-bottom: 2px solid #f1c40f; padding-bottom: 2px;">{subtexto}</span>')
         elif tag == 'replace':
-            # Palabras reemplazadas o sinónimos (Texto rojo)
             resultado_html.append(f'<span style="color: #e74c3c; font-weight: 500;">{subtexto}</span>')
         elif tag == 'insert':
-            # Nueva estructura o palabras agregadas (Texto azul)
             resultado_html.append(f'<span style="color: #3498db; font-weight: 500;">{subtexto}</span>')
 
     return " ".join(resultado_html)
@@ -124,7 +128,6 @@ with col1:
 with col2:
     st.subheader(f"Resultado ({modo_seleccionado})")
     
-    # Leyenda visual de colores
     st.markdown(
         """
         <div style="font-size: 0.85rem; margin-bottom: 10px; background-color: #1e1e1e; padding: 8px; border-radius: 5px;">
@@ -143,7 +146,6 @@ with col2:
                 texto_generado = parafrasear_texto(texto_entrada, modo_seleccionado)
                 html_resultado = generar_diferencias_html(texto_entrada, texto_generado)
 
-                # Mostrar el texto con estilos HTML visuales
                 st.markdown(
                     f"""
                     <div style="background-color: #262730; padding: 15px; border-radius: 8px; min-height: 250px; font-size: 1.05rem; line-height: 1.6;">
