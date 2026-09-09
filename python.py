@@ -21,12 +21,20 @@ st.markdown("""
     footer {visibility: hidden;}
     header {visibility: hidden;}
     .stAppDeployButton {display:none;}
-    [data-testid="stStatusWidget"] {display:none !important;}
-    [data-testid="stViewerBadge"] {display:none !important;}
-    div[class*="viewerBadge"] {display:none !important;}
-    div[class*="stActionButton"] {display:none !important;}
-    div[data-testid="stToolbar"] {display:none !important;}
-    #stDecoration {display:none !important;}
+    
+    /* Ocultar barra flotante de administración y estado */
+    [data-testid="stStatusWidget"],
+    [data-testid="stViewerBadge"],
+    [data-testid="stDecoration"],
+    [data-testid="stToolbar"],
+    .viewerBadge_container__13vxi,
+    .viewerBadge_link__1S137,
+    div[class*="viewerBadge"],
+    div[class*="StatusWidget"],
+    div[class*="stActionButton"] {
+        display: none !important;
+        visibility: hidden !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
