@@ -7,7 +7,7 @@ from google.genai import types
 
 warnings.filterwarnings("ignore")
 
-# Configuración de página
+# Configuración de página con icono
 st.set_page_config(
     page_title="Parafraseador Pro", 
     page_icon="✨", 
@@ -15,22 +15,31 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Estilos CSS
+# Estilos CSS para ocultar interfaz, avatares y ajustar márgenes
 st.markdown("""
     <style>
+    /* Ocultar elementos principales de la interfaz */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
+    
+    /* Ocultar marcas de agua, badges, avatares y botones flotantes */
     .stAppDeployButton {display: none !important;}
     [data-testid="stStatusWidget"] {display: none !important;}
     [data-testid="stViewerBadge"] {display: none !important;}
     [data-testid="stDecoration"] {display: none !important;}
     [data-testid="stToolbar"] {display: none !important;}
     [data-testid="stHeader"] {display: none !important;}
+    
+    /* Selectores por patrones de clase de Streamlit */
     div[class*="viewerBadge"] {display: none !important;}
     div[class*="stActionButton"] {display: none !important;}
     div[class*="styles_viewerBadge"] {display: none !important;}
-    .block-container { padding-top: 2rem !important; }
+    
+    /* Ajustar espacio superior tras ocultar header */
+    .block-container {
+        padding-top: 2rem !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -51,6 +60,7 @@ PROMPTS_MODOS = {
     "Ampliar": "Desarrolla con mayor profundidad el contenido del texto agregando explicaciones complementarias."
 }
 
+# Inicializar sesión para persistir resultados
 if "texto_generado" not in st.session_state:
     st.session_state.texto_generado = ""
 if "html_resultado" not in st.session_state:
@@ -100,6 +110,7 @@ def generar_diferencias_html(original: str, parafraseado: str) -> str:
 
     return " ".join(resultado_html)
 
+# Selector de modos
 modo_seleccionado = st.radio(
     "Selecciona el modo de parafraseo:",
     options=list(PROMPTS_MODOS.keys()),
@@ -137,27 +148,37 @@ with col2:
 
     if btn_procesar:
         if texto_entrada.strip():
-            with st.spinner("Transformando texto..."):
-                try:
-                    st.session_state.texto_generado = parafrasear_texto(texto_entrada, modo_seleccionado)
-                    st.session_state.html_resultado = generar_diferencias_html(texto_entrada, st.session_state.texto_generado)
-                except Exception as e:
-                    err_msg = str(e)
-                    if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
-                        # CONTADOR EN TIEMPO REAL
-                        aviso = st.empty()
-                        progreso = st.progress(1.0)
-                        
-                        segundos_espera = 15
-                        for i in range(segundos_espera, 0, -1):
-                            aviso.warning(f"⏳ **Límite de la cuota alcanzado.** Podrás volver a intentar en **{i} segundos**...")
-                            progreso.progress(i / segundos_espera)
-                            time.sleep(1)
-                        
-                        aviso.success("✅ **¡Listo! Puedes presionar 'Reformular' nuevamente.**")
-                        progreso.empty()
-                    else:
-                        st.error(f"Error al conectar con la API de Gemini: {e}")
+            st.session_state.texto_generado = ""
+            st.session_state.html_resultado = ""
+            
+            intentos = 0
+            exito = False
+            
+            while intentos < 2 and not exito:
+                with st.spinner("Transformando texto..."):
+                    try:
+                        st.session_state.texto_generado = parafrasear_texto(texto_entrada, modo_seleccionado)
+                        st.session_state.html_resultado = generar_diferencias_html(texto_entrada, st.session_state.texto_generado)
+                        exito = True
+                    except Exception as e:
+                        err_msg = str(e)
+                        if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
+                            intentos += 1
+                            if intentos == 1:
+                                aviso = st.empty()
+                                progreso = st.progress(1.0)
+                                segundos_espera = 15
+                                for i in range(segundos_espera, 0, -1):
+                                    aviso.warning(f"⏳ **Saturación temporal de API.** Reintentando automáticamente en **{i} segundos**...")
+                                    progreso.progress(i / segundos_espera)
+                                    time.sleep(1)
+                                aviso.empty()
+                                progreso.empty()
+                            else:
+                                st.error("❌ **Has alcanzado el límite diario de peticiones gratuitas de tu API Key.** Vuelve a intentarlo mañana o genera una nueva API Key en Google AI Studio.")
+                        else:
+                            st.error(f"Error al conectar con la API de Gemini: {e}")
+                            break
         else:
             st.warning("Escribe o pega un texto en la columna izquierda antes de presionar el botón.")
 
